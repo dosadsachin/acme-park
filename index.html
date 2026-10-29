@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Acme Park Pitch</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: a scrolling stack of fixed 1600x900 slides scaled to the window. One claim and one visual per slide. Section markers are green parking-zone signs. */
+:root{
+  color-scheme:light;
+  --desk:#D9DFDC; --paper:#F4F6F5; --card:#FFFFFF; --ink:#0E1714; --ink-2:#4B5852; --ink-3:#6B7872; --line:#D2D9D5;
+  --sign:#18794E; --sign-soft:#E6F2EB; --amber:#9A5B00; --amber-line:#E0A33A; --amber-soft:#FFF6E8;
+  --night:#0A0D10; --night-line:#2B333D; --night-ink:#EEF2F0; --night-ink-2:#A3ADB9;
+  --display:"Manrope","Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"IBM Plex Sans","Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono","DejaVu Sans Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--desk);color:var(--ink);font:400 16px/1.5 var(--body);padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:20px 88px}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--sign);outline-offset:3px}
+.deck{display:grid;justify-items:center;gap:24px}
+.frame{position:relative;width:calc(1600px * var(--s,0.5));height:calc(900px * var(--s,0.5));max-width:100%;border-radius:calc(18px * var(--s,0.5));overflow:hidden;box-shadow:0 18px 40px rgba(14,23,20,.12)}
+.slide{position:absolute;top:0;left:0;width:1600px;height:900px;transform:scale(var(--s,0.5));transform-origin:0 0;background:var(--paper);padding:72px 88px 60px;display:flex;flex-direction:column;gap:40px;overflow:hidden}
+.slide.dark{background:var(--night);color:var(--night-ink)}
+
+.hd{display:flex;align-items:center;gap:20px}
+.zsign{flex:none;width:86px;height:68px;border-radius:12px;background:var(--sign);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:inset 0 0 0 2.5px rgba(255,255,255,.22)}
+.zsign small{font:800 11px/1 var(--display);letter-spacing:.18em}
+.zsign b{font:800 36px/1 var(--display);margin-top:3px}
+.sec{font:500 17px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.hl{font:800 58px/1.08 var(--display);letter-spacing:-.02em;margin:-8px 0 0;max-width:1400px;text-wrap:balance}
+.pno{position:absolute;right:60px;bottom:32px;font:500 16px var(--mono);color:var(--ink-3)}
+.dark .pno{color:var(--night-ink-2)}
+.lbl{font:500 16px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.shot{display:block;width:100%;height:auto;border-radius:12px;box-shadow:0 0 0 4px #1a1d22,0 0 0 5px #2c3138,0 10px 24px rgba(0,0,0,.18)}
+.pill{display:inline-block;font:600 17px/1 var(--body);padding:8px 12px;border-radius:999px;white-space:nowrap;background:#E6EBE8;color:var(--ink-2)}
+.pill.go{background:var(--sign);color:#fff}
+.pill.hi{background:var(--amber-soft);color:var(--amber);box-shadow:inset 0 0 0 1.5px var(--amber-line)}
+.btn{display:inline-flex;align-items:center;height:64px;padding:0 28px;border-radius:14px;font:700 21px var(--display);text-decoration:none;border:1.5px solid var(--night-line);color:var(--night-ink)}
+.btn.go{background:var(--sign);border-color:var(--sign);color:#fff}
+
+/* cover and close */
+.cover{display:flex;gap:60px;align-items:center;height:100%}
+.cover .txt{width:640px;flex:none;display:flex;flex-direction:column;gap:30px}
+.eyebrow{font:500 17px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--night-ink-2)}
+.cover h1,.close h1{font:800 72px/1.04 var(--display);letter-spacing:-.025em;margin:0;text-wrap:balance}
+.by{font:500 20px var(--body);color:var(--night-ink-2)}
+.titleblock{display:flex;flex-direction:column;gap:12px}
+.h1sub{margin:0;font:500 40px/1.15 var(--display);letter-spacing:-.01em;color:var(--night-ink);opacity:.55}
+.close{display:flex;flex-direction:column;justify-content:center;gap:34px;height:100%;max-width:1000px}
+.close .disc{font:400 21px/1.5 var(--body);color:var(--night-ink-2);border-top:1px solid var(--night-line);padding-top:26px;margin:0}
+
+/* three cards */
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.c{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:30px 30px 34px;display:flex;flex-direction:column;gap:14px}
+.c p{margin:0;font:400 25px/1.4 var(--body);color:var(--ink)}
+.c .sub{font-size:20px;color:var(--ink-2)}
+.c.go{background:var(--sign-soft);border-color:var(--sign)}
+.strip{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font:400 21px var(--body);color:var(--ink-2)}
+.yr{font:500 20px var(--mono);background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:8px 14px;color:var(--ink)}
+
+.two-c{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.nots{display:grid;gap:14px}
+.nots div{display:grid;grid-template-columns:560px 1fr;gap:28px;align-items:center;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:22px 28px}
+.nots .w{font:700 27px/1.25 var(--display);color:var(--ink)}
+.nots .y{font:400 24px/1.35 var(--body);color:var(--ink-2)}
+/* assumptions */
+.qa{display:grid;gap:16px}
+.qa div{display:grid;grid-template-columns:520px 1fr;gap:28px;align-items:center;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:22px 28px}
+.qa .q{font:600 24px/1.3 var(--body);color:var(--ink-2)}
+.qa .a{font:700 25px/1.3 var(--display);color:var(--ink)}
+.qa .pill{justify-self:start}
+
+/* moments */
+.moments{display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
+.mo{display:flex;flex-direction:column;gap:16px}
+.mo h3{font:800 32px/1.1 var(--display);margin:6px 0 0;display:flex;align-items:center;gap:12px}
+.mo p{margin:0;font:400 23px/1.4 var(--body);color:var(--ink-2)}
+.surf{display:flex;gap:40px;font:400 21px var(--body);color:var(--ink-2);border-top:1.5px solid var(--line);padding-top:24px}
+.surf b{color:var(--ink);font-weight:600}
+
+/* flow */
+.flow{display:grid;grid-template-columns:repeat(6,1fr);gap:18px;align-items:start}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.step{position:relative;background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:16px 18px}
+.step.hero{border:2.5px solid var(--sign);background:var(--sign-soft)}
+.step .n{font:500 15px var(--mono);color:var(--ink-3)}
+.step b{display:block;font:800 25px/1.2 var(--display);margin-top:2px}
+.col:not(:last-child) .step::after{content:"";position:absolute;right:-19px;top:50%;width:18px;height:2px;background:var(--ink-3)}
+.col:not(:last-child) .step::before{content:"";position:absolute;right:-20px;top:calc(50% - 6px);border:6px solid transparent;border-left:8px solid var(--ink-3);border-right:0}
+.edge{background:var(--card);border:1.5px solid var(--line);border-radius:11px;padding:10px 14px;font:500 18px/1.3 var(--body);color:var(--ink-2)}
+.edge.err{border:2px solid var(--amber-line);background:var(--amber-soft);color:var(--ink)}
+.legend{display:flex;gap:28px;font:400 19px var(--body);color:var(--ink-2)}
+.legend i{display:inline-block;width:28px;height:18px;border-radius:5px;vertical-align:-3px;margin-right:10px}
+
+/* prototype */
+.linkbar{display:flex;gap:16px;align-items:center;margin-top:-12px}
+.url{font:500 20px var(--mono);background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:14px 18px;color:var(--ink);text-decoration:none}
+.btn.light{background:var(--sign);border-color:var(--sign);color:#fff}
+.live{flex:1;min-height:0;border-radius:16px;overflow:hidden;border:1.5px solid var(--line);background:var(--desk);position:relative;margin-top:-12px}
+.live iframe{position:absolute;top:0;left:0;width:150%;height:150%;transform:scale(.6667);transform-origin:0 0;border:0;display:block;background:var(--desk)}
+.print-only{display:none}
+
+/* iteration */
+.ba{display:grid;grid-template-columns:1fr 200px 1fr;gap:28px;align-items:center}
+.ba figure{margin:0;display:flex;flex-direction:column;gap:16px}
+.ba figcaption{font:600 22px/1.3 var(--body);color:var(--ink)}
+.ba figcaption span{display:block;font:500 16px var(--mono);color:var(--sign);letter-spacing:.06em;margin-bottom:4px}
+.arrow{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.arrow span{font:600 17px/1.25 var(--body);text-align:center;background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--ink-2)}
+.vlinks{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.vlinks a{font:500 16px var(--mono);text-decoration:none;border:1.5px solid var(--line);background:var(--card);border-radius:9px;padding:7px 9px;color:var(--ink)}
+.vlinks a:hover{border-color:var(--sign)}
+
+/* decisions */
+.dt{width:100%;border-collapse:separate;border-spacing:0;font:400 23px/1.3 var(--body);background:var(--card);border:1.5px solid var(--line);border-radius:18px;overflow:hidden}
+.dt th{font:500 15px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:16px 24px;background:#EEF1EF;border-bottom:1.5px solid var(--line)}
+.dt td{padding:19px 24px;border-bottom:1px solid var(--line);vertical-align:top}
+.dt tr:last-child td{border-bottom:0}
+.dt td:first-child{font-weight:600;color:var(--ink-3);font-size:20px;padding-top:21px}
+.dt td:nth-child(2){font-weight:700;font-family:var(--display)}
+.dt td:nth-child(3){color:var(--ink-3);text-decoration:line-through;text-decoration-color:rgba(107,120,114,.55)}
+.dt td:nth-child(4){color:var(--ink-2)}
+
+/* why yes */
+.split{display:grid;grid-template-columns:1fr 560px;gap:32px;align-items:start}
+.levers{display:grid;gap:18px}
+.lev{display:grid;grid-template-columns:56px 1fr;gap:20px;align-items:center;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:22px 26px;font:700 27px/1.25 var(--display)}
+.lev i{width:56px;height:56px;border-radius:14px;background:var(--sign);color:#fff;display:grid;place-items:center;font:800 26px var(--display);font-style:normal}
+.asks{background:var(--night);color:var(--night-ink);border-radius:18px;padding:30px 32px;display:flex;flex-direction:column;gap:18px}
+.asks h3{font:800 27px/1.2 var(--display);margin:0}
+.asks ul{margin:0;padding:0;list-style:none;display:grid;gap:14px}
+.asks li{font:400 22px/1.35 var(--body);color:var(--night-ink);padding-left:28px;position:relative}
+.asks li::before{content:"";position:absolute;left:0;top:10px;width:13px;height:13px;border-radius:3px;background:var(--sign)}
+
+/* measure */
+.metric{background:var(--sign);color:#fff;border-radius:20px;padding:34px 38px;display:flex;flex-direction:column;gap:10px}
+.metric .lbl{color:rgba(255,255,255,.8)}
+.metric b{font:800 40px/1.15 var(--display)}
+.guards{display:flex;gap:16px}
+.guards span{flex:1;background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:18px 22px;font:400 21px/1.35 var(--body);color:var(--ink-2)}
+.guards b{display:block;color:var(--ink);font:700 22px var(--display)}
+.tests{margin:0;padding:0;list-style:none;display:grid;gap:14px;counter-reset:t}
+.tests li{display:grid;grid-template-columns:44px 1fr;gap:16px;align-items:center;font:600 24px/1.3 var(--body);counter-increment:t;background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:16px 20px}
+.tests li::before{content:counter(t);width:44px;height:44px;border-radius:12px;background:var(--ink);color:#fff;display:grid;place-items:center;font:800 21px var(--display)}
+
+/* next */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.two h3{font:500 16px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:0 0 14px}
+.unsure li::before{background:var(--amber-line);color:var(--ink)}
+
+/* navigation */
+.nav{position:fixed;right:max(16px, env(safe-area-inset-right, 0px));bottom:calc(16px + env(safe-area-inset-bottom, 0px));display:flex;gap:6px;align-items:center;background:var(--ink);color:#fff;border-radius:999px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:5}
+.nav button{width:44px;height:44px;border-radius:50%;border:0;background:transparent;color:#fff;cursor:pointer;display:grid;place-items:center}
+.nav button:hover{background:rgba(255,255,255,.12)}
+.nav span{font:500 15px var(--mono);min-width:72px;text-align:center}
+.nav svg{width:22px;height:22px}
+
+@media print{
+  @page{size:1600px 900px;margin:0}
+  body{background:#fff;padding:0}
+  .deck{gap:0;display:block}
+  .frame{width:1600px!important;height:900px!important;border-radius:0;box-shadow:none;break-after:page;max-width:none}
+  .slide{transform:none!important}
+  .nav,.live,.screen-only{display:none!important}
+  .print-only{display:block}
+}
+</style>
+
+<main class="deck" id="deck">
+
+<section class="frame" id="s1" aria-label="Cover"><div class="slide dark">
+  <div class="cover">
+    <div class="txt">
+      <span class="eyebrow">Acme Autos × ParkMobile</span>
+      <div class="titleblock"><h1>Street parking in one tap.</h1><p class="h1sub">(or maybe a couple)</p></div>
+      <span class="by">Sachin Dosad · Design exercise for Consilio · 29 Oct 2026</span>
+      <div><a class="btn go" href="prototype.html" target="_blank" rel="noopener">Open the live prototype</a></div>
+    </div>
+    <div style="flex:1;min-width:0"><img class="shot" src="park-v22.png" alt="Car console parking card: Zone 4127, Market St, 1 hour ending 4:02 PM, Start parking $2.85"></div>
+  </div>
+  <span class="pno">1 / 13</span>
+</div></section>
+
+<section class="frame" id="s2" aria-label="Section 1, the problem"><div class="slide">
+  <div class="hd"><span class="zsign"><small>SECTION</small><b>1</b></span><span class="sec">The problem in my words</span></div>
+  <h2 class="hl">The competitor is the parking app already on the driver's phone.</h2>
+  <div class="two-c">
+    <div class="c"><span class="lbl">The real problem</span><p>Drivers already pay by phone. The car only wins where it knows more: the plate, the spot, and when you park or leave.</p></div>
+    <div class="c go"><span class="lbl">Solving for</span><p>City regulars who pay for street parking several times a week.</p></div>
+  </div>
+  <span class="pno">2 / 13</span>
+</div></section>
+
+<section class="frame" id="s2b" aria-label="Section 1, what I'm not solving"><div class="slide">
+  <div class="hd"><span class="zsign"><small>SECTION</small><b>1</b></span><span class="sec">What I chose not to solve</span></div>
+  <h2 class="hl">Not solving for, and why.</h2>
+  <div class="nots">
+    <div><span class="w">Destination drivers</span><span class="y">Fewer trips. Next release.</span></div>
+    <div><span class="w">Rentals and fleets</span><span class="y">Possibility of the payer changing every trip.</span></div>
+    <div><span class="w">Typed search</span><span class="y">No typing while driving.</span></div>
+    <div><span class="w">An Acme wallet</span><span class="y">ParkMobile already holds the cards.</span></div>
+    <div><span class="w">Sessions that start without a tap</span><span class="y">Surprise charges kill trust.</span></div>
+  </div>
+  <span class="pno">3 / 13</span>
+</div></section>
+
+<section class="frame" id="s3" aria-label="Section 2, assumptions and questions"><div class="slide">
+  <div class="hd"><span class="zsign"><small>SECTION</small><b>2</b></span><span class="sec">Assumptions and questions</span></div>
+  <h2 class="hl">What I'd have asked, and what I assumed instead.</h2>
+  <div class="qa">
+    <div><span class="q">Can GPS find the right zone?</span><span class="a">Mostly. The driver confirms it against the street sign.</span></div>
+    <div><span class="q">Whose account pays?</span><span class="a">The driver's own ParkMobile account, linked once by QR.</span></div>
+    <div><span class="q">What's allowed while driving?</span><span class="a">Nothing that moves money. Paying needs Park.</span></div>
+    <div><span class="q">How is revenue split?</span><span class="a">A share of ParkMobile's fee on in-car sessions.</span></div>
+  </div>
+  <span class="pno">4 / 13</span>
+</div></section>
+
+<section class="frame" id="s4" aria-label="Section 3, the key moments"><div class="slide">
+  <div class="hd"><span class="zsign"><small>SECTION</small><b>3</b></span><span class="sec">The key moments</span></div>
+  <h2 class="hl">Three moments: approach, park, drive away.</h2>
+  <div class="moments">
+    <div class="mo"><img class="shot" src="moment-approach.png" alt="Approach card with two parking options near the destination"><h3>Approach</h3></div>
+    <div class="mo"><img class="shot" src="moment-park.png" alt="Parking card shown when the car shifts to Park"><h3>Park <span class="pill go">Hero</span></h3></div>
+    <div class="mo"><img class="shot" src="moment-settle.png" alt="Parking ended card showing $2.31 for 47 minutes"><h3>Drive away</h3></div>
+  </div>
+  <div class="surf"><span><b>Console:</b> what the car knows</span><span><b>Phone:</b> typing and time away</span></div>
+  <span class="pno">5 / 13</span>
+</div></section>
+
+<section class="frame" id="s5" aria-label="Section 4, the flow"><div class="slide">
+  <div class="hd"><span class="zsign"><small>SECTION</small><b>4</b></span><span class="sec">The flow</span></div>
+  <h2 class="hl">No failure ever charges the driver.</h2>
+  <div class="flow">
+    <div class="col"><div class="step"><span class="n">once</span><b>Link</b></div><div class="edge">Not linked yet</div><div class="edge err">Sign-in fails</div></div>
+    <div class="col"><div class="step"><span class="n">2</span><b>Approach</b></div><div class="edge">No destination</div></div>
+    <div class="col"><div class="step"><span class="n">3</span><b>Park</b></div><div class="edge">Two zones nearby</div><div class="edge">Free hours</div></div>
+    <div class="col"><div class="step hero"><span class="n">4 · hero</span><b>Start</b></div><div class="edge">Car moves first</div><div class="edge err">Card declined</div><div class="edge err">No connection</div><div class="edge">At the time limit</div></div>
+    <div class="col"><div class="step"><span class="n">5</span><b>Away</b></div><div class="edge">Limit reached</div></div>
+    <div class="col"><div class="step"><span class="n">6</span><b>Settle</b></div><div class="edge">City bans auto-end</div><div class="edge">Charge disputed</div><div class="edge">Short move in zone</div></div>
+  </div>
+  <div class="legend"><span><i style="background:var(--amber-soft);box-shadow:inset 0 0 0 2px var(--amber-line)"></i>Error: no session starts, nothing charged</span><span>Every box is clickable in the prototype.</span></div>
+  <span class="pno">6 / 13</span>
+</div></section>
+
+<section class="frame" id="s6" aria-label="Section 5, link to a clickable prototype"><div class="slide">
+  <div class="hd"><span class="zsign"><small>SECTION</small><b>5</b></span><span class="sec">Link to a clickable prototype</span></div>
+  <div class="linkbar"><a class="url proto-url" href="prototype.html" target="_blank" rel="noopener">prototype.html</a><a class="btn light screen-only" href="prototype.html" target="_blank" rel="noopener">Open full screen</a></div>
+  <div class="live"><iframe src="prototype.html" title="Acme Park clickable prototype" loading="lazy"></iframe></div>
+  <img class="print-only shot" src="prototype-full.png" alt="The clickable prototype with the car console, phone and guided tour" style="box-shadow:none;border:1.5px solid var(--line)">
+  <span class="pno">7 / 13</span>
+</div></section>
+
+<section class="frame" id="s7" aria-label="Section 5, iterations"><div class="slide">
+  <div class="hd"><span class="zsign"><small>SECTION</small><b>5</b></span><span class="sec">How it got here</span></div>
+  <h2 class="hl">22 versions in two days.</h2>
+  <div class="ba">
+    <figure><img class="shot" src="park-v1.png" alt="Version 1 parking card"><figcaption><span>V1</span>45 words, price shown twice</figcaption></figure>
+    <div class="arrow"><span>Zone as a sign</span><span>76 dp targets</span><span>24 dp text floor</span><span>One card system</span></div>
+    <figure><img class="shot" src="park-v22.png" alt="Version 22 parking card"><figcaption><span>V22</span>Half the words, one tap</figcaption></figure>
+  </div>
+  <div class="vlinks" id="vlinks"></div>
+  <span class="pno">8 / 13</span>
+</div></section>
+
+<section class="frame" id="s8" aria-label="Section 6, decisions and tradeoffs"><div class="slide">
+  <div class="hd"><span class="zsign"><small>SECTION</small><b>6</b></span><span class="sec">Decisions and tradeoffs</span></div>
+  <h2 class="hl">What I picked, and what it beat.</h2>
+  <table class="dt">
+    <thead><tr><th style="width:170px"></th><th style="width:430px">Picked</th><th style="width:400px">Over</th><th>Because</th></tr></thead>
+    <tbody>
+      <tr><td>Driver</td><td>City regular</td><td>Destination driver</td><td>Pays most often</td></tr>
+      <tr><td>Prompt</td><td>The car offers at Park</td><td>Pay as you stay</td><td>Price is clear before the tap</td></tr>
+      <tr><td>Account</td><td>QR link, sign in on phone</td><td>Acme wallet</td><td>No typing in the car</td></tr>
+      <tr><td>Paying</td><td>Only in Park</td><td>While moving</td><td>Money waits for a stopped car</td></tr>
+      <tr><td>Time</td><td>Stepper</td><td>One-tap chips</td><td>Works for any zone limit</td></tr>
+    </tbody>
+  </table>
+  <span class="pno">9 / 13</span>
+</div></section>
+
+<section class="frame" id="s9" aria-label="Section 7, why leadership should say yes"><div class="slide">
+  <div class="hd"><span class="zsign"><small>SECTION</small><b>7</b></span><span class="sec">Why leadership should say yes</span></div>
+  <h2 class="hl">Easier than the phone, every single time.</h2>
+  <div class="split">
+    <div class="levers">
+      <div class="lev"><i>1</i>Found at the moment you need it</div>
+      <div class="lev"><i>2</i>One tap on every repeat visit</div>
+      <div class="lev"><i>3</i>Never charged for a failure</div>
+      <div class="lev"><i>4</i>The pattern carries over to charging and tolls</div>
+    </div>
+    <div class="asks"><h3>Needed from ParkMobile</h3><ul><li>Attribution per session</li><li>Zone and session APIs</li><li>Fee parity with the phone</li><li>Per-minute billing</li></ul></div>
+  </div>
+  <span class="pno">10 / 13</span>
+</div></section>
+
+<section class="frame" id="s10" aria-label="Section 8, how we'd know it's working"><div class="slide">
+  <div class="hd"><span class="zsign"><small>SECTION</small><b>8</b></span><span class="sec">How I'd know it's working</span></div>
+  <div class="metric"><span class="lbl">The one number · day 60</span><b>Share of a driver's parking sessions started in the car</b></div>
+  <div class="two">
+    <div><h3>Must not get worse</h3><div class="guards" style="flex-direction:column"><span><b>Safety</b>Glances under 2 s</span><span><b>Trust</b>Disputes per 1,000 sessions</span></div></div>
+    <div><h3>Test first</h3><ol class="tests"><li>Zone matching on a real street</li><li>Glance time in a simulator</li><li>Trust in auto-end</li></ol></div>
+  </div>
+  <span class="pno">11 / 13</span>
+</div></section>
+
+<section class="frame" id="s11" aria-label="Section 9, what I'd do next"><div class="slide">
+  <div class="hd"><span class="zsign"><small>SECTION</small><b>9</b></span><span class="sec">What I'd do next</span></div>
+  <h2 class="hl">Test before polish.</h2>
+  <div class="two">
+    <div><h3>Another week</h3><ol class="tests"><li>Street and simulator tests</li><li>ParkMobile's city rules</li><li>Garage booking for destination drivers</li></ol></div>
+    <div><h3>Least sure about</h3><ol class="tests unsure"><li>Zone accuracy on dense blocks</li><li>Whether the prompt starts to nag</li></ol></div>
+  </div>
+  <span class="pno">12 / 13</span>
+</div></section>
+
+<section class="frame" id="s12" aria-label="Thank you"><div class="slide dark">
+  <div class="close">
+    <h1>Thank you.</h1>
+    <div><a class="btn go" href="prototype.html" target="_blank" rel="noopener">Open the live prototype</a></div>
+    <span class="by">Sachin Dosad</span>
+  </div>
+  <span class="pno">13 / 13</span>
+</div></section>
+
+</main>
+
+<nav class="nav screen-only" aria-label="Slides">
+  <button id="prev" aria-label="Previous slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <span id="count">1 / 13</span>
+  <button id="next" aria-label="Next slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+</nav>
+
+<script>
+(function(){
+  const frames=[...document.querySelectorAll('.frame')], N=frames.length;
+  const vl=document.getElementById('vlinks');
+  if(vl){let h='<span class="lbl" style="margin-right:6px">All live:</span>';for(let i=1;i<=22;i++)h+=`<a href="v${i}.html" target="_blank" rel="noopener">v${i}</a>`;vl.innerHTML=h;}
+  try{const u=new URL("prototype.html",location.href);if(/^https?:$/.test(u.protocol))document.querySelectorAll('.proto-url').forEach(a=>{a.textContent=u.host+u.pathname;});}catch(e){}
+  function fit(){const w=Math.min(document.documentElement.clientWidth-32,(window.innerHeight-40)*16/9,1920);document.documentElement.style.setProperty('--s',Math.max(.15,w/1600));}
+  window.addEventListener('resize',fit); fit();
+  let cur=0;
+  const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting&&e.intersectionRatio>.55){cur=frames.indexOf(e.target);document.getElementById('count').textContent=(cur+1)+' / '+N;}});},{threshold:[.55]});
+  frames.forEach(f=>io.observe(f));
+  const go=i=>{i=Math.max(0,Math.min(N-1,i));frames[i].scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});};
+  document.getElementById('prev').addEventListener('click',()=>go(cur-1));
+  document.getElementById('next').addEventListener('click',()=>go(cur+1));
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();go(cur+1);}
+    else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();go(cur-1);}
+  });
+  if(location.hash){const t=document.querySelector(location.hash);if(t&&t.classList.contains('frame'))setTimeout(()=>t.scrollIntoView({block:'center'}),50);}
+})();
+</script>

@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Acme Park Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: reviewer page (theme-aware) framing a fixed dark car console (1280x720) and a phone, with a control panel on the right.
+   v2: panel on the driver side at half width over a draggable map; zone shown as its street sign. */
+:root{
+  --bg:#E9EDF1; --panel:#FFFFFF; --panel-2:#F4F6F8; --ink:#141920; --ink-2:#56606C; --line:#D3D9E0; --accent:#2563D9; --accent-ink:#FFFFFF; --warn:#B26A00; --warn-bg:#FFF3DF; --focus:#2563D9;
+  --font-ui:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-car:"Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --c-bg:#090B0E; --c-surface:#14181E; --c-surface-2:#1D232B; --c-line:#2B333D; --c-ink:#F1F4F7; --c-ink-2:#A3ADB9; --c-accent:#4F9DFF; --c-accent-ink:#04101F; --c-ok:#43D18E; --c-warn:#FFB547;
+  --c-road:#232A33; --c-block:#10141A; --c-label:#6D7885; --c-sign:#18794E; --c-park:#121D17; --c-water:#0C1622;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1015; --panel:#161A20; --panel-2:#1C2128; --ink:#E8ECF0; --ink-2:#99A3AF; --line:#2A3038; --accent:#6EA8FF; --accent-ink:#06101F; --warn:#FFB547; --warn-bg:#2E2412; --focus:#6EA8FF; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0D1015; --panel:#161A20; --panel-2:#1C2128; --ink:#E8ECF0; --ink-2:#99A3AF; --line:#2A3038; --accent:#6EA8FF; --accent-ink:#06101F; --warn:#FFB547; --warn-bg:#2E2412; --focus:#6EA8FF; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--font-ui);margin:0;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:20px 32px}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:1500px;margin:0 auto;display:grid;gap:16px}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 24px}
+header.top h1{font:700 22px/1.2 var(--font-car);margin:0;letter-spacing:-.01em}
+header.top h1 span{font:500 12px var(--font-mono);color:var(--ink-2);letter-spacing:.06em;text-transform:uppercase;margin-left:10px;vertical-align:middle;border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+header.top p{margin:0;color:var(--ink-2);max-width:70ch}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.left{display:grid;gap:16px;min-width:0}
+.stage{display:flex;gap:16px;align-items:flex-start;min-width:0}
+.console-wrap{position:relative;flex:1 1 auto;min-width:0;aspect-ratio:16/9;max-width:100%;border-radius:20px;background:#000;box-shadow:0 0 0 6px #1a1d22,0 0 0 7px #2c3138,0 18px 40px rgba(0,0,0,.25)}
+.phone-wrap{position:relative;flex:0 0 auto;max-width:100%}
+.scaler{position:absolute;top:0;left:0;transform-origin:0 0}
+.lbl{font:500 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.surface-tags{display:flex;gap:16px}
+.surface-tags .lbl:first-child{flex:1}
+
+.narr{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;display:grid;gap:10px}
+.narr-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.narr h2{font:700 19px/1.25 var(--font-car);margin:0;text-wrap:balance}
+.tag{font:500 11px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;border-radius:6px;padding:3px 8px;background:var(--panel-2);color:var(--ink-2);border:1px solid var(--line)}
+.tag.err{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.narr-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px}
+.narr-grid p{margin:2px 0 0;max-width:62ch}
+.narr-nav{display:flex;gap:8px;justify-content:flex-end}
+.btn{border:1px solid var(--line);background:var(--panel-2);border-radius:10px;padding:8px 14px;font-weight:500}
+.btn:hover{border-color:var(--ink-2)}
+.btn.cta{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn[disabled]{opacity:.45;cursor:default}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:18px;position:sticky;top:max(16px, env(safe-area-inset-top, 0px))}
+.panel section{display:grid;gap:8px}
+.panel h3{font:700 14px var(--font-car);margin:0}
+.panel .hint{margin:0;color:var(--ink-2);font-size:13px}
+.steps,.edges{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.steps button,.edges button{width:100%;text-align:left;border:1px solid transparent;background:transparent;border-radius:9px;padding:7px 10px;display:flex;gap:10px;align-items:center;font-size:14px}
+.steps button:hover,.edges button:hover{background:var(--panel-2)}
+.steps button[aria-current="true"],.edges button[aria-current="true"]{background:var(--panel-2);border-color:var(--line);font-weight:600}
+.num{font:500 12px var(--font-mono);color:var(--ink-2);width:18px;flex:none}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none}
+.dot.err{background:var(--warn)}
+.ctrl{display:grid;gap:10px}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:var(--panel-2);padding:7px 16px;font:700 14px var(--font-car)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.field{display:grid;gap:4px;font-size:13px;color:var(--ink-2)}
+select{font:inherit;color:var(--ink);background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:7px 10px}
+.toggles{display:grid;gap:6px}
+.toggles label{display:flex;gap:8px;align-items:center;font-size:14px}
+.toggles input{width:16px;height:16px;accent-color:var(--accent)}
+.small{font-size:13px}
+
+@media (max-width:1100px){.layout{grid-template-columns:minmax(0,1fr)}.panel{position:static}}
+@media (max-width:760px){.stage{flex-direction:column;align-items:center}.console-wrap{width:100%}.narr-grid{grid-template-columns:1fr}.surface-tags{display:none}}
+
+/* ===== CAR CONSOLE (fixed 1280x720 canvas) ===== */
+.console{width:1280px;height:720px;position:relative;overflow:hidden;border-radius:20px;background:var(--c-bg);color:var(--c-ink);font-family:var(--font-car);font-variant-numeric:tabular-nums;user-select:none;-webkit-user-select:none}
+.console button{font-family:var(--font-car)}
+.mapvp{position:absolute;inset:0;overflow:hidden;cursor:grab;touch-action:none;background:var(--c-bg)}
+.mapvp.dragging{cursor:grabbing}
+.mapinner{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+.mapinner.ease{transition:transform .35s ease}
+.status{position:absolute;inset:0 0 auto;height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:linear-gradient(var(--c-bg) 50%, transparent);z-index:3;pointer-events:none}
+.status button{pointer-events:auto}
+.gear{display:flex;align-items:center;gap:14px}
+.gear-pill{display:flex;gap:2px;background:var(--c-surface);border:1px solid var(--c-line);border-radius:12px;padding:4px}
+.gear-pill span{width:36px;height:34px;display:grid;place-items:center;border-radius:8px;font-weight:800;font-size:20px;color:var(--c-label)}
+.gear-pill span.on{background:var(--c-ink);color:var(--c-bg)}
+.speed{font-size:22px;font-weight:700}
+.speed small{font-size:15px;color:var(--c-ink-2);font-weight:600;margin-left:4px}
+.clock{font-size:24px;font-weight:700;position:absolute;left:50%;transform:translateX(-50%)}
+.sysicons{display:flex;gap:18px;align-items:center;color:var(--c-ink-2);font-size:18px;font-weight:600}
+.sysicons .off{color:var(--c-warn)}
+.micbtn{width:56px;height:56px;border-radius:50%;border:1px solid var(--c-line);background:var(--c-surface);color:var(--c-ink);display:grid;place-items:center}
+.micbtn svg{width:26px;height:26px}
+.mapstrip{position:absolute;right:24px;top:96px;z-index:3;display:grid;gap:12px}
+.mapstrip button{width:76px;height:76px;border-radius:50%;border:1px solid var(--c-line);background:var(--c-surface);color:var(--c-ink);display:grid;place-items:center;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.mapstrip svg{width:30px;height:30px}
+.dock{position:absolute;inset:auto 0 0;height:92px;background:var(--c-surface);border-top:1px solid var(--c-line);display:flex;justify-content:center;gap:12px;align-items:center;z-index:3}
+.dock button{width:148px;height:72px;border-radius:16px;border:0;background:transparent;color:var(--c-ink-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:15px;font-weight:600;position:relative}
+.dock button.live{color:var(--c-ink)}
+.dock button.live:hover{background:var(--c-surface-2)}
+.dock button[disabled]{cursor:default;opacity:.55}
+.dock .badge{position:absolute;top:8px;right:40px;width:12px;height:12px;border-radius:50%;background:var(--c-ok);box-shadow:0 0 0 3px var(--c-surface)}
+.dock svg{width:28px;height:28px}
+
+.card{position:absolute;z-index:4;left:24px;top:84px;width:616px;background:var(--c-surface);border:1px solid var(--c-line);border-radius:28px;padding:26px;display:flex;flex-direction:column;gap:18px;box-shadow:0 20px 60px rgba(0,0,0,.55)}
+.card.narrow{width:560px}
+.head{display:flex;gap:22px;align-items:center}
+.sign{flex:none;width:150px;height:116px;border-radius:16px;background:var(--c-sign);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:inset 0 0 0 3px rgba(255,255,255,.18)}
+.sign small{font-size:16px;font-weight:800;letter-spacing:.16em}
+.sign b{font-size:52px;font-weight:800;line-height:1;margin-top:4px}
+.sign.sm{width:112px;height:88px}.sign.sm small{font-size:13px}.sign.sm b{font-size:38px}
+.headtxt{display:flex;flex-direction:column;gap:10px;min-width:0;flex:1}
+.headtxt b{font-size:30px;font-weight:800;line-height:1.1;white-space:nowrap}
+.headtxt .sub{font-size:20px;color:var(--c-ink-2);font-weight:600;white-space:nowrap}
+.textbtn{align-self:flex-start;background:transparent;border:1px solid var(--c-line);border-radius:14px;height:56px;padding:0 22px;font-size:19px;font-weight:700;color:var(--c-ink)}
+.ichips{display:flex;gap:10px}
+.ichip{height:52px;border-radius:26px;background:var(--c-surface-2);display:flex;align-items:center;gap:10px;padding:0 18px 0 14px;font-size:20px;font-weight:700;white-space:nowrap}
+.ichip svg{width:24px;height:24px;color:var(--c-ink-2);flex:none}
+.timebox{background:var(--c-bg);border-radius:20px;padding:12px 20px 16px 12px;display:grid;gap:12px}
+.timetop{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:76px;height:76px;border-radius:18px;border:0;background:var(--c-surface-2);color:var(--c-ink);display:grid;place-items:center}
+.stepper button svg{width:30px;height:30px}
+.stepper button[disabled]{opacity:.28;cursor:default}
+.stepper output{min-width:120px;text-align:center;font-size:30px;font-weight:800}
+.ends{text-align:right;display:flex;flex-direction:column}
+.ends small{font-size:16px;color:var(--c-ink-2);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.ends b{font-size:34px;font-weight:800;line-height:1.1}
+.track{position:relative;height:10px;border-radius:5px;background:var(--c-surface-2);margin:0 8px}
+.track i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--c-accent)}
+.track em{position:absolute;right:-8px;top:-9px;height:28px;width:4px;border-radius:2px;background:var(--c-warn)}
+.tracklbl{display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:var(--c-ink-2);margin:0 0 0 8px}
+.tracklbl .max{color:var(--c-warn);letter-spacing:.06em}
+.actions{display:flex;gap:12px;position:relative}
+.actions .primary{flex:1}
+.primary{flex:none;height:88px;border-radius:22px;border:0;background:var(--c-accent);color:var(--c-accent-ink);display:flex;align-items:center;justify-content:space-between;padding:0 28px;font-size:27px;font-weight:800}
+.primary:hover{filter:brightness(1.07)}
+.primary .price{display:flex;flex-direction:column;align-items:flex-end;line-height:1.05}
+.primary .price b{font-size:30px}
+.primary .price small{font-size:14px;font-weight:700;opacity:.75}
+.primary.solo{justify-content:center}
+.later{width:112px;height:88px;border-radius:22px;border:1px solid var(--c-line);background:transparent;color:var(--c-ink);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:20px;font-weight:700;line-height:1}
+.later span{color:var(--c-ink-2);font-size:24px;letter-spacing:2px;margin-top:2px}
+.pop{position:absolute;right:0;bottom:100px;width:300px;background:var(--c-surface-2);border:1px solid var(--c-line);border-radius:20px;padding:8px;display:grid;gap:6px;box-shadow:0 18px 50px rgba(0,0,0,.6);z-index:5}
+.pop button{height:76px;border-radius:14px;border:0;background:transparent;color:var(--c-ink);font-size:21px;font-weight:700;text-align:left;padding:0 18px;display:flex;align-items:center;gap:14px}
+.pop button:hover{background:var(--c-surface)}
+.pop svg{width:26px;height:26px;color:var(--c-ink-2)}
+.ghostrow{display:flex;gap:12px;align-items:center}
+.ghost{white-space:nowrap;height:72px;border-radius:18px;border:1px solid var(--c-line);background:transparent;color:var(--c-ink);font-size:20px;font-weight:700;padding:0 24px}
+.ghost.grow{flex:1}
+.eyebrow{font-size:16px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c-ink-2);display:flex;align-items:center;gap:10px}
+.eyebrow i{width:10px;height:10px;border-radius:50%;background:var(--c-accent);display:inline-block}
+.eyebrow.ok{color:var(--c-ok)} .eyebrow.ok i{background:var(--c-ok)}
+.eyebrow.warn{color:var(--c-warn)} .eyebrow.warn i{background:var(--c-warn)}
+.title{font-size:34px;font-weight:800;line-height:1.15;margin:0;white-space:nowrap}
+.body{font-size:21px;color:var(--c-ink-2);font-weight:600;margin:0;line-height:1.4}
+.facts{display:grid;gap:12px}
+.fact{display:flex;align-items:center;gap:14px;font-size:21px;font-weight:700}
+.fact .ico{width:48px;height:48px;border-radius:14px;background:var(--c-surface-2);display:grid;place-items:center;flex:none}
+.fact .ico svg{width:26px;height:26px;color:var(--c-ink-2)}
+.fact .ico.ok svg{color:var(--c-ok)} .fact .ico.warn svg{color:var(--c-warn)}
+.opt{display:flex;align-items:center;gap:18px;width:100%;min-height:96px;border-radius:20px;border:1px solid var(--c-line);background:var(--c-surface-2);color:var(--c-ink);padding:12px 20px;text-align:left}
+.pin{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:24px;background:var(--c-ink);color:var(--c-bg);flex:none}
+.opt .o{display:flex;flex-direction:column;gap:6px;flex:1}
+.opt b{font-size:24px;font-weight:800;white-space:nowrap}
+.opt .meta{display:flex;gap:16px;font-size:19px;color:var(--c-ink-2);font-weight:700}
+.opt .meta span{display:flex;align-items:center;gap:6px}
+.opt .meta svg{width:20px;height:20px}
+.opt .chev svg{width:28px;height:28px;color:var(--c-ink-2)}
+.signs{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.signpick{border:2px solid var(--c-line);background:var(--c-surface-2);border-radius:22px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:12px;color:var(--c-ink)}
+.signpick .sign{width:170px;height:124px}
+.signpick span{font-size:20px;font-weight:700;color:var(--c-ink-2);display:flex;align-items:center;gap:8px}
+.signpick span svg{width:22px;height:22px}
+.qrrow{display:flex;gap:24px;align-items:center}
+.qr{background:#fff;border-radius:16px;padding:12px;border:0;flex:none;width:200px;height:200px}
+.qr svg{width:100%;height:100%;display:block}
+.bigline{display:flex;align-items:baseline;gap:18px}
+.bigline b{font-size:46px;font-weight:800;line-height:1}
+.bigline span{font-size:22px;color:var(--c-ink-2);font-weight:700}
+.chip{position:absolute;left:24px;top:84px;z-index:4;background:var(--c-surface);border:1px solid var(--c-line);border-radius:999px;padding:14px 24px 14px 16px;font-size:20px;font-weight:700;color:var(--c-ink);display:flex;gap:12px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.chip .sign.xs{width:auto;height:36px;border-radius:9px;padding:0 10px;flex-direction:row;gap:6px}
+.chip .sign.xs b{font-size:20px;margin:0}
+.chip svg{width:22px;height:22px;color:var(--c-ink-2)}
+.toast{position:absolute;left:50%;bottom:112px;transform:translateX(-50%);z-index:6;background:var(--c-ink);color:var(--c-bg);border-radius:999px;padding:14px 26px;font-size:20px;font-weight:700;white-space:nowrap;display:flex;gap:10px;align-items:center}
+.toast svg{width:22px;height:22px}
+.off-overlay{position:absolute;inset:0;z-index:8;background:rgba(5,6,8,.9);display:grid;place-items:center;text-align:center;color:var(--c-label)}
+.off-overlay b{display:block;font-size:30px;color:var(--c-ink-2)}
+.off-overlay span{font-size:20px}
+
+/* ===== PHONE (fixed 390x800 canvas) ===== */
+.phone{width:390px;height:800px;border-radius:56px;background:#000;padding:12px;box-shadow:0 0 0 2px #2c3138,0 18px 40px rgba(0,0,0,.25);font-family:var(--font-car);font-variant-numeric:tabular-nums}
+.screen{width:100%;height:100%;border-radius:44px;overflow:hidden;position:relative;background:#F5F6F8;color:#11161C}
+.island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:110px;height:32px;border-radius:20px;background:#000;z-index:5}
+.lock{position:absolute;inset:0;background:linear-gradient(160deg,#2B3A4F,#121821 70%);color:#fff;padding:90px 18px 20px;display:flex;flex-direction:column;align-items:center}
+.lock .t{font-size:84px;font-weight:600;line-height:1;letter-spacing:-.02em}
+.lock .d{font-size:18px;font-weight:600;opacity:.85;margin-top:8px}
+.notif{margin-top:auto;width:100%;background:rgba(245,247,250,.92);color:#11161C;border-radius:24px;padding:16px 18px;display:grid;gap:4px;margin-bottom:24px}
+.notif .nhead{display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#5A6470;text-transform:uppercase;letter-spacing:.04em}
+.notif b{font-size:18px}
+.notif p{margin:0;font-size:16px;color:#2F3842;line-height:1.35}
+.notif .act{margin-top:8px;height:44px;border-radius:12px;border:0;background:#11161C;color:#fff;font-size:16px;font-weight:700}
+.app{position:absolute;inset:0;padding:64px 22px 26px;display:flex;flex-direction:column;gap:14px}
+.appbar{display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:800;color:#18794E;letter-spacing:.01em}
+.appbar span{color:#5A6470;font-weight:600}
+.app h4{font-size:30px;line-height:1.15;margin:8px 0 0;font-weight:800;letter-spacing:-.01em}
+.app p{margin:0;font-size:17px;color:#3B4550;line-height:1.4}
+.pcard{background:#fff;border-radius:20px;padding:16px 18px;display:grid;gap:6px;box-shadow:0 1px 0 #E2E6EA}
+.pcard .k{font-size:13px;font-weight:700;color:#5A6470;text-transform:uppercase;letter-spacing:.05em}
+.pcard .v{font-size:19px;font-weight:700}
+.pbtn{height:56px;border-radius:16px;border:0;background:#18794E;color:#fff;font-size:18px;font-weight:800}
+.pbtn.alt{background:#E6EAEE;color:#11161C}
+.pbtn[disabled]{opacity:.4;cursor:default}
+.pwarn{background:#FFF1DC;color:#7A4A00;border-radius:16px;padding:14px 16px;font-size:16px;font-weight:600;line-height:1.4}
+.bottom{margin-top:auto;display:grid;gap:10px}
+@media (prefers-reduced-motion:no-preference){.card,.chip,.pop{animation:rise .22s ease-out}@keyframes rise{from{transform:translateY(10px);opacity:.4}}}
+@media (prefers-reduced-motion:reduce){.mapinner.ease{transition:none}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Acme Park <span>Prototype v2</span></h1>
+    <p>Pay for street parking from the car. Take the guided tour on the right, or drive it yourself. The left screen is the car console; the right one is the driver's phone. Drag or scroll the map to move around.</p>
+  </header>
+
+  <div class="layout">
+    <div class="left">
+      <div class="surface-tags" aria-hidden="true"><span class="lbl">Car console</span><span class="lbl" id="phoneTag">Driver's phone</span></div>
+      <div class="stage">
+        <div class="console-wrap" id="consoleWrap"><div class="scaler" id="consoleScaler"><div class="console" id="console" role="region" aria-label="Car console">
+          <div class="mapvp" id="mapvp" aria-label="Map. Drag to move, scroll or pinch to zoom."><div class="mapinner" id="mapinner"></div></div>
+          <div class="status" id="cstatus"></div>
+          <div class="mapstrip" aria-label="Map controls">
+            <button data-map="in" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+            <button data-map="out" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+            <button data-map="center" aria-label="Recenter on the car"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="6"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
+          </div>
+          <div id="clayer"></div>
+          <nav class="dock" id="cdock" aria-label="Apps"></nav>
+        </div></div></div>
+        <div class="phone-wrap" id="phoneWrap"><div class="scaler" id="phoneScaler"><div class="phone"><div class="screen" id="phone" role="region" aria-label="Driver's phone"></div></div></div></div>
+      </div>
+      <section class="narr" aria-live="polite" id="narr"></section>
+    </div>
+
+    <aside class="panel" aria-label="Prototype controls">
+      <section>
+        <h3>Guided tour</h3>
+        <ol class="steps" id="steps"></ol>
+      </section>
+      <section>
+        <h3>Edge and error paths</h3>
+        <p class="hint">Amber dot: an error. No session starts, so nothing is charged.</p>
+        <ul class="edges" id="edges"></ul>
+      </section>
+      <section class="ctrl">
+        <h3>Drive it yourself</h3>
+        <div class="row"><span class="small">Gear</span>
+          <div class="seg" role="group" aria-label="Gear"><button id="gP" data-act="park" aria-pressed="false">P</button><button id="gD" data-act="drive" aria-pressed="true">D</button></div>
+        </div>
+        <label class="field" for="loc">Where the car stops
+          <select id="loc">
+            <option value="paid">Paid zone 4127</option>
+            <option value="two">Two zones within GPS error</option>
+            <option value="free">Free hours</option>
+            <option value="none">Not a partner zone</option>
+          </select>
+        </label>
+        <div class="toggles">
+          <label><input type="checkbox" id="tLinked" checked> ParkMobile account linked</label>
+          <label><input type="checkbox" id="tOnline" checked> Car has a connection</label>
+          <label><input type="checkbox" id="tDecline"> Card will decline</label>
+          <label><input type="checkbox" id="tAuto" checked> City allows auto-end</label>
+        </div>
+        <div class="row">
+          <button class="btn small" data-act="voice">Say “Start parking”</button>
+          <button class="btn small" data-act="walk">Walk away</button>
+          <button class="btn small" data-act="tenMin">Jump to 10 min left</button>
+          <button class="btn small" data-act="returnDrive">Return and drive off</button>
+          <button class="btn small" data-act="resetAll">Reset</button>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function(){
+const RATE=2.5, FEE=0.35, MAX=120, STEP=30, PLATE='8KPL294', CARD='Visa 4417';
+const $=s=>document.querySelector(s);
+const fmt=m=>{m=((m%1440)+1440)%1440;let h=Math.floor(m/60),mm=m%60;const ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+String(mm).padStart(2,'0')+' '+ap;};
+const money=v=>'$'+v.toFixed(2);
+const durTxt=m=>m<60?m+' min':(m%60?(Math.floor(m/60)+' hr '+(m%60)+' min'):(m/60)+' hr');
+const total=m=>RATE*m/60+FEE;
+
+const base=()=>({gear:'D',speed:22,time:15*60+2,linked:true,loc:'paid',declines:false,online:true,autoEnd:true,nav:true,signinFails:false,
+  card:null,zone:'4127',dur:60,session:null,phone:'lock',dontAsk:false,carOff:false,toast:null,note:'driving',route:'dest',receipt:null,tour:null,edge:null,later:false});
+let S=base();
+let toastTimer=null;
+function note(k){S.note=k;}
+function toast(t,icon){S.toast={t,icon};clearTimeout(toastTimer);toastTimer=setTimeout(()=>{S.toast=null;renderLayer();},3200);}
+const USED=47;
+
+const A={
+  park(){S.gear='P';S.speed=0;S.carOff=false;S.later=false;
+    if(S.session){S.card='sessionView';return note('sessionView');}
+    if(!S.linked){S.card='link';return note('link');}
+    if(S.loc==='paid'){if(S.dontAsk){S.card=null;return note('dontAskPark');}S.card='prompt';return note(S.dur>=MAX?'promptMax':'prompt');}
+    if(S.loc==='two'){S.card='zonePick';return note('zonePick');}
+    S.card=null;note(S.loc==='free'?'freeQuiet':'noneQuiet');},
+  drive(){S.carOff=false;S.later=false;
+    if(S.session){S.gear='D';S.speed=12;return A.leave();}
+    const wasParked=S.gear==='P';S.gear='D';S.speed=wasParked?6:22;
+    if(['prompt','zonePick','link','free','none','declined','offline','sessionView'].includes(S.card)){S.card='collapsed';return note('collapsed');}
+    S.card=null;note('driving');},
+  leave(){S.carOff=false;S.gear='D';S.speed=12;
+    if(S.autoEnd){S.receipt={zone:S.session.zone,used:USED,cost:total(USED),auto:true};S.session=null;S.card='receipt';S.phone='receipt';return note('receipt');}
+    S.card='endAsk';note('endAsk');},
+  endNow(){if(!S.session)return;S.receipt={zone:S.session.zone,used:USED,cost:total(USED),auto:false};S.session=null;S.card='receipt';S.phone='receipt';note('endedManual');},
+  start(){S.later=false;if(S.gear!=='P'){toast('Parking can start once you’re in Park');return note('voiceMoving');}
+    if(S.session)return;
+    if(!S.online){S.card='offline';return note('offline');}
+    if(S.declines){S.card='declined';S.phone='declined';return note('declined');}
+    S.session={zone:S.zone,start:S.time,end:S.time+S.dur};S.card='started';S.phone='started';note(S.autoEnd?'started':'startedNoAuto');},
+  inc(){S.dur=Math.min(MAX,S.dur+STEP);note(S.dur>=MAX?'promptMax':'prompt');},
+  dec(){S.dur=Math.max(STEP,S.dur-STEP);note('prompt');},
+  notThis(){S.card='zonePick';S.later=false;note('zonePick');},
+  pickZone(z){S.zone=z;S.card='prompt';note(S.dur>=MAX?'promptMax':'prompt');},
+  later(){S.later=!S.later;note(S.later?'later':'prompt');},
+  notNow(){S.card=null;S.later=false;toast('Parking stays in the dock');note('notNow');},
+  dontAsk(){S.dontAsk=true;S.card=null;S.later=false;toast('Won’t ask at this spot again');note('dontAsk');},
+  done(){S.card=null;note('sessionQuiet');},
+  voice(){if(S.gear==='P'&&!S.session&&['prompt',null].includes(S.card)&&S.linked&&S.loc==='paid'){A.start();toast('“Start parking” · '+durTxt(S.dur),'mic');return;}
+    if(S.gear!=='P'){toast('I’ll offer parking once you’re in Park','mic');return note('voiceMoving');}
+    A.openApp();},
+  openApp(){S.later=false;if(S.session){S.card='sessionView';return note('sessionView');}
+    if(S.gear!=='P'){S.card='appMoving';return note('appMoving');}
+    if(!S.linked){S.card='link';return note('link');}
+    if(S.loc==='paid'){S.card='prompt';return note(S.dur>=MAX?'promptMax':'prompt');}
+    if(S.loc==='two'){S.card='zonePick';return note('zonePick');}
+    S.card=S.loc;note(S.loc==='free'?'free':'none');},
+  closeCard(){S.card=null;note(S.session?'sessionQuiet':'notNow');},
+  scan(){if(S.card==='offline'){S.phone='startOnPhone';return note('startOnPhone');}
+    if(!S.linked){S.phone='approve';note('approve');}},
+  approve(){if(S.signinFails){S.phone='signinFail';return note('signinFail');}
+    S.linked=true;$('#tLinked').checked=true;S.phone='linked';
+    S.card=(S.gear==='P'&&S.loc==='paid')?'prompt':null;note('linked');},
+  cancelLink(){S.phone='lock';note('notNow');S.card=null;},
+  retrySignin(){S.signinFails=false;A.approve();},
+  payOnPhone(){S.card=null;toast('Open ParkMobile on your phone','phone');note('payOnPhone');},
+  retry(){S.card='prompt';A.start();},
+  updateCard(){S.declines=false;$('#tDecline').checked=false;S.phone='lock';S.card='prompt';toast('Card updated');note('cardUpdated');},
+  phoneStart(){S.session={zone:S.zone,start:S.time,end:S.time+S.dur};S.card=null;S.phone='timer';note('phoneStarted');},
+  walk(){if(!S.session){toast('Start a session first');return;}S.carOff=true;S.gear='P';S.card=null;S.phone='timer';note('away');},
+  tenMin(){if(!S.session){toast('Start a session first');return;}S.carOff=true;S.time=S.session.end-10;S.phone='alert10';note('alert10');},
+  extend(){if(!S.session)return;if(S.session.end-S.session.start+STEP>MAX){S.phone='maxReached';return note('maxReached');}S.session.end+=STEP;S.phone='timer';note('extended');},
+  phoneEnd(){A.endNow();S.carOff=true;S.card=null;note('endedPhone');},
+  openTimer(){S.phone='timer';note(S.time>=S.session.end-10?'alert10':'away');},
+  returnDrive(){if(S.session){S.time=S.session.start+USED;S.carOff=false;S.gear='D';S.speed=12;return A.leave();}A.drive();},
+  approachPick(k){S.card=null;S.route=k;toast('Route updated · pay when you park','nav');note('approachPicked');},
+  approachDismiss(){S.card=null;note('driving');},
+  dispute(){toast('Opens the dispute form in ParkMobile','phone');note('dispute');},
+  resetAll(){go(null);}
+};
+
+const NOTES={
+  driving:{t:'Driving',w:'The car is moving. Parking stays out of the way until it matters.',y:'Nothing on this screen asks for attention at speed.',try:'Drag the map, or shift to P in the controls.'},
+  link:{t:'Link once, on the phone',w:'The account isn’t linked yet, so the car shows a QR code instead of a payment card.',y:'Sign-in happens on the phone, where typing is safe. The driver keeps their ParkMobile cards and history.',try:'Tap the QR code to scan it, then approve on the phone.'},
+  approve:{t:'Approve on the phone',w:'ParkMobile asks the driver to let this car start and end sessions with their account.',y:'One approval covers every future session. The car never sees the password or card number.',try:'Tap Approve on the phone.'},
+  signinFail:{t:'Sign-in fails',err:1,w:'The phone shows what went wrong and offers a retry. The QR code stays on the car screen.',y:'A failed sign-in never leaves the driver stuck in the car with nothing to do.',try:'Tap Try again on the phone.'},
+  linked:{t:'Linked',w:'The phone confirms the link, and the car moves straight to the parking card.',y:'The driver sees the payoff of linking right away, in the same stop.'},
+  approach:{t:'Offer parking before arrival',w:'Near the destination, the car offers two options. Each row carries a number that matches a pin on the map.',y:'Choosing only reroutes. Paying waits for Park, so nothing that moves money happens at speed.',try:'Pick an option.'},
+  approachPicked:{t:'Route updated',w:'The car routes to the choice. Payment waits until the car is in Park.',y:'The approach card carries discovery without a money decision while driving.'},
+  noDest:{t:'No destination set',w:'Regulars often drive without navigation. The car shows no approach card at all.',y:'The prompt at Park still works, so the hero moment never depends on nav.'},
+  prompt:{t:'Shift to Park, get the card',w:'The zone appears as the same green sign the driver sees on the street. Rate, plate and card are icons. The price appears once, inside the button.',y:'Matching a sign is faster than reading a sentence, and the card sits on the driver’s side with the map still in view.',try:'Set the time with + and −, then Start parking. Drag the map to look around.'},
+  promptMax:{t:'Duration at the zone maximum',w:'The time bar reaches the amber MAX mark and + switches off.',y:'The driver can’t buy time the zone won’t honour, which would end in a ticket.'},
+  later:{t:'Later',w:'Later holds Not now and Don’t ask here.',y:'Two quiet choices behind one button keep the card calm, and both stay one tap away.'},
+  zonePick:{t:'Two zones are close',w:'GPS can’t tell which side of the street the car is on, so the card shows both signs side by side.',y:'A wrong zone means a ticket despite paying. Tapping the sign you see beats a guess.',try:'Tap the sign that matches the street.'},
+  collapsed:{t:'Car left Park before the tap',w:'The card shrinks to a small chip. No session started and nothing was charged.',y:'Money decisions need a stopped car. The card returns the next time the car is in Park.'},
+  started:{t:'One tap starts the session',w:'The session runs until the end time shown. The phone gets the timer.',y:'Price and card were shown before the tap, so the charge is never a surprise.',try:'Next: Walk away.'},
+  startedNoAuto:{t:'Session started',w:'This city doesn’t let the car end sessions on its own, and the card says so.',y:'The driver learns the rule now, so the end-of-trip prompt makes sense later.'},
+  sessionView:{t:'Session in progress',w:'Opening Parking during a session shows its end time and a way to end it.',y:'One place for the session in the car; the phone carries it when the driver is away.'},
+  sessionQuiet:{t:'Session running',w:'The card is closed. A chip and a green dot on Parking show a session is live.',y:'The console stays quiet once the job is done.'},
+  away:{t:'The phone takes over',w:'The car is off. The phone shows the timer and can extend or end the session.',y:'The driver isn’t near the console any more, so the phone owns the session.',try:'Use “Jump to 10 min left”, or tap Extend on the phone.'},
+  alert10:{t:'Ten minutes left',w:'A notification lets the driver extend without walking back to the car.',y:'This is the moment tickets happen. The alert arrives early enough to act.',try:'Tap Extend on the notification.'},
+  extended:{t:'Extended',w:'The end time moves by 30 minutes, inside the zone maximum.',y:'Extending happens on the phone because the driver is away from the car.'},
+  maxReached:{t:'Zone maximum reached',w:'Extend is off and the phone says when to move the car.',y:'Offering an extension the city won’t honour would sell the driver a ticket.'},
+  receipt:{t:'Driving away ends it',w:'The car ended the session on pull-away and charged for 47 minutes. The receipt is on the phone.',y:'Public reviews complain about sessions that never end. The car knows when you leave.',a:'Assumes the partner bills by the minute where the city allows it.'},
+  endAsk:{t:'City doesn’t allow auto-end',w:'As the car pulls away, one large button ends the session. Voice works too.',y:'Ending saves money, so a single glanceable tap is allowed while moving.',try:'Tap End parking, or say it.'},
+  endedManual:{t:'Ended',w:'The session ended and the receipt went to the phone.',y:'The driver sees the final charge right away.'},
+  endedPhone:{t:'Ended on the phone',w:'The driver ended the session from the phone while away from the car.',y:'Either surface can end a session; the receipt is the same.'},
+  dispute:{t:'Charge looks wrong',w:'The receipt links straight to the dispute form in ParkMobile.',y:'The partner owns payments and disputes. The car never tries to resolve money problems on a car screen.'},
+  declined:{t:'Card declined',err:1,w:'No session started. The car says so plainly and sends the fix to the phone.',y:'Card details are never typed in the car. The phone is where payment gets fixed.',try:'Tap Update card on the phone, then try again.'},
+  cardUpdated:{t:'Card updated',w:'The car shows the parking card again, ready to start.',y:'The driver goes from error to session without starting over.'},
+  offline:{t:'No connection',err:1,w:'The car can’t reach ParkMobile, so no session started. A QR code hands the job to the phone.',y:'The driver still parks legally even when the car has no signal.',try:'Tap the QR code, then start on the phone.'},
+  startOnPhone:{t:'Start on the phone',w:'The QR opened ParkMobile with the zone already filled in.',y:'The handoff carries the car’s context, so the phone flow is one tap too.',try:'Tap Start parking on the phone.'},
+  phoneStarted:{t:'Started on the phone',w:'The session runs on the phone. The car shows it once it reconnects.',y:'A fallback that works beats an error that blocks.'},
+  notNow:{t:'Not now',w:'The card closes. Parking stays in the dock, and voice still works.',y:'A prompt that can’t be dismissed would train drivers to ignore it.'},
+  dontAsk:{t:'Don’t ask here',w:'The car stops prompting at this spot, such as home or a free work lot.',y:'Fewer wrong-time prompts keep the right-time prompt trusted.'},
+  dontAskPark:{t:'Quiet at this spot',w:'The driver asked not to be prompted here, so nothing appears.',y:'Parking is still one tap away in the dock.'},
+  freeQuiet:{t:'Free hours',w:'Meters are free right now, so the car stays quiet.',y:'No prompt beats a prompt that asks for $0.',try:'Tap Parking in the dock to see why.'},
+  free:{t:'Free hours',w:'Opened manually, Parking says meters are free until morning.',y:'The driver gets a reason instead of an empty screen.'},
+  noneQuiet:{t:'Not a partner zone',w:'ParkMobile doesn’t cover this spot, so the car stays quiet.',y:'A prompt the driver can’t act on would erode trust in every future prompt.',try:'Tap Parking in the dock to see why.'},
+  none:{t:'Not a partner zone',w:'Opened manually, Parking says this spot isn’t covered and how to pay instead.',y:'Clear about its limits, so drivers trust it where it does work.'},
+  appMoving:{t:'Parking while moving',w:'Opened while driving, Parking points to voice and to Park.',y:'Starting or extending a paid session needs the car in Park.'},
+  voiceMoving:{t:'Voice while moving',w:'The assistant replies that parking starts once the car is in Park.',y:'Same rule on every surface: money moves only when the car is stopped.'},
+  payOnPhone:{t:'Pay on the phone',w:'The driver chose the phone. The car steps aside.',y:'The car is an option, never a gate.'},
+};
+
+/* ---------- icons ---------- */
+const sv=(d,extra='')=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${d}</svg>`;
+const I={
+  nav:sv('<path d="M3 11l18-8-8 18-2-8-8-2z"/>'),
+  media:sv('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
+  phone:sv('<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/>'),
+  call:sv('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/>'),
+  park:sv('<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M10 17V7h3.5a3 3 0 010 6H10"/>'),
+  climate:sv('<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/>'),
+  mic:sv('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>'),
+  check:sv('<path d="M5 12.5l4.5 4.5L19 7.5"/>','stroke-width="2.6"'),
+  warn:sv('<path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18v.01"/>'),
+  pause:sv('<path d="M9 5v14M15 5v14"/>','stroke-width="3"'),
+  rate:sv('<circle cx="12" cy="12" r="9"/><path d="M12 7v10M15 9.5c-.6-1-1.7-1.5-3-1.5-1.7 0-3 .9-3 2.2 0 3 6 1.6 6 4.6 0 1.3-1.3 2.2-3 2.2-1.4 0-2.6-.6-3.1-1.6"/>'),
+  car:sv('<path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3H3z"/><circle cx="7.5" cy="13.5" r=".8"/><circle cx="16.5" cy="13.5" r=".8"/>'),
+  cardi:sv('<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15h4"/>'),
+  walk:sv('<circle cx="13" cy="4.5" r="1.8"/><path d="M10 21l2-6 3 3v3M9 12l2-4 3 1 2 3 2 1M11 8l-2 3"/>'),
+  plus:sv('<path d="M12 5v14M5 12h14"/>','stroke-width="2.6"'),
+  minus:sv('<path d="M5 12h14"/>','stroke-width="2.6"'),
+  chev:sv('<path d="M9 5l7 7-7 7"/>','stroke-width="2.6"'),
+  clock:sv('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  driveaway:sv('<path d="M4 17h11M15 13l4 4-4 4"/><path d="M6 13V9l1.5-3h7L16 9"/>'),
+  bell:sv('<path d="M6 16V11a6 6 0 0112 0v5l2 2H4z"/><path d="M10 21h4"/>'),
+  hide:sv('<path d="M3 3l18 18M10.6 6.2A9.8 9.8 0 0112 6c5 0 9 6 9 6a17 17 0 01-3.2 3.7M6.3 7.8C4.2 9.4 3 12 3 12s4 6 9 6c1.3 0 2.5-.3 3.6-.8"/>'),
+  arrowUp:sv('<path d="M12 19V5M6 11l6-6 6 6"/>'),
+  arrowDown:sv('<path d="M12 5v14M6 13l6 6 6-6"/>'),
+  garage:sv('<path d="M3 10l9-6 9 6v10H3z"/><path d="M7 20v-6h10v6M7 17h10"/>'),
+};
+
+function qr(seed){let s=seed,cells='';const n=25,c=7.6;const r=()=>(s=(s*1103515245+12345)%2147483648)/2147483648;
+  const finder=(x,y)=>`<rect x="${x*c}" y="${y*c}" width="${7*c}" height="${7*c}" fill="#000"/><rect x="${(x+1)*c}" y="${(y+1)*c}" width="${5*c}" height="${5*c}" fill="#fff"/><rect x="${(x+2)*c}" y="${(y+2)*c}" width="${3*c}" height="${3*c}" fill="#000"/>`;
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){const inF=(x<8&&y<8)||(x>16&&y<8)||(x<8&&y>16);if(!inF&&r()>.52)cells+=`<rect x="${x*c}" y="${y*c}" width="${c}" height="${c}"/>`;}
+  return `<svg viewBox="0 0 ${n*c} ${n*c}" aria-hidden="true"><g fill="#000">${cells}</g>${finder(0,0)}${finder(18,0)}${finder(0,18)}</svg>`;}
+
+/* ---------- map (2600 x 1800 map units) ---------- */
+const MW=2600, MH=1800, CAR={x:1150,y:900};
+const HROADS=[[300,'Bush St',44],[600,'Pine St',44],[900,'Market St',60],[1200,'Mission St',44],[1500,'Howard St',44]];
+const VROADS=[[250,'Sansome St'],[590,'Battery St'],[930,'Front St'],[1270,'Davis St'],[1610,'Drumm St'],[1950,'Spear St'],[2260,'Main St']];
+const T=(x,y,t,o='')=>`<text x="${x}" y="${y}" fill="var(--c-label)" font-size="17" font-weight="700" font-family="Manrope,sans-serif" ${o}>${t}</text>`;
+let MAPBASE='';
+(function buildBase(){
+  let s='';
+  const ys=[0,...HROADS.map(r=>r[0]),MH], xs=[0,...VROADS.map(r=>r[0]),2400];
+  for(let i=0;i<xs.length-1;i++)for(let j=0;j<ys.length-1;j++){
+    const x0=xs[i]+(i?24:0)+12,x1=xs[i+1]-24-12,y0=ys[j]+(j?30:0)+12,y1=ys[j+1]-30-12;
+    if(x1-x0<40||y1-y0<40)continue;
+    const park=(i===5&&j===3)||(i===1&&j===1);
+    s+=`<rect x="${x0}" y="${y0}" width="${x1-x0}" height="${y1-y0}" rx="12" fill="var(${park?'--c-park':'--c-block'})"/>`;
+    if(park)s+=T((x0+x1)/2,(y0+y1)/2+6,i===5?'Harbor Park':'Bush Square','text-anchor="middle" fill-opacity=".9"');
+  }
+  HROADS.forEach(([y,n,w])=>{s+=`<rect x="0" y="${y-w/2}" width="2400" height="${w}" fill="var(--c-road)"/>`;});
+  VROADS.forEach(([x])=>{s+=`<rect x="${x-20}" y="0" width="40" height="${MH}" fill="var(--c-road)"/>`;});
+  HROADS.forEach(([y,n])=>{[420,1330,1900].forEach(x=>s+=T(x,y+6,n));});
+  VROADS.forEach(([x,n])=>{[150,760,1360].forEach(y=>s+=T(x+6,y,n,`transform="rotate(-90 ${x+6} ${y})"`));});
+  s+=`<path d="M2400 0 H${MW} V${MH} H2380 C2440 1500 2350 1200 2420 900 C2470 650 2380 300 2400 0Z" fill="var(--c-water)"/>`;
+  s+=T(2500,900,'San Francisco Bay',`text-anchor="middle" transform="rotate(-90 2500 900)" fill-opacity=".8"`);
+  MAPBASE=s;
+})();
+function pill(x,y,label,color,down){const w=24+label.length*15;const ty=down?y+18:y-18;
+  return `<g><rect x="${x-w/2}" y="${ty-20}" width="${w}" height="40" rx="10" fill="${color}"/><text x="${x}" y="${ty+8}" text-anchor="middle" font-size="24" font-weight="800" fill="#fff" font-family="Manrope,sans-serif">${label}</text><path d="M${x-8} ${down?ty-20:ty+20} L${x} ${down?ty-30:ty+30} L${x+8} ${down?ty-20:ty+20}z" fill="${color}"/></g>`;}
+function mapSVG(){
+  let s=`<svg width="${MW}" height="${MH}" viewBox="0 0 ${MW} ${MH}" aria-hidden="true" style="display:block"><rect width="${MW}" height="${MH}" fill="var(--c-bg)"/>${MAPBASE}`;
+  const parked=S.gear==='P'||S.carOff;
+  const showZones=(parked&&(S.loc==='paid'||S.loc==='two'))||S.session||S.card==='approach';
+  const two=S.loc==='two'&&parked&&!S.session;
+  if(showZones){
+    const sel=S.session?S.session.zone:S.zone;
+    s+=`<rect x="1010" y="866" width="240" height="8" rx="4" fill="var(--c-ok)" opacity="${two||sel==='4127'?1:.35}"/>`;
+    if(two||sel==='4128')s+=`<rect x="1010" y="926" width="240" height="8" rx="4" fill="var(--c-ok)"/>`;
+    if(S.card==='approach'){s+=pill(1130,862,'1','var(--c-ink)'.replace('var(--c-ink)','#F1F4F7'),false).replace('fill="#fff"','fill="#090B0E"');}
+    else{ if(two||sel==='4127')s+=pill(1130,862,'4127','var(--c-sign)',false); if(two||sel==='4128')s+=pill(1130,938,'4128','var(--c-sign)',true);}
+  }
+  if(S.card==='approach'||S.route==='garage'){s+=`<rect x="1065" y="640" width="90" height="90" rx="14" fill="var(--c-surface-2)" stroke="var(--c-line)" stroke-width="2"/>`;if(S.card==='approach')s+=pill(1110,640,'2','#F1F4F7',false).replace('fill="#fff"','fill="#090B0E"');}
+  if(S.gear==='D'&&S.nav&&!S.session&&!S.receipt&&S.card!=='collapsed'){
+    const g=S.route==='garage';const tx=g?1110:1380, ty=g?700:860;
+    s+=`<path d="M${CAR.x} ${CAR.y} H${g?1270:tx} ${g?'V700 H1155':''}" stroke="var(--c-accent)" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>`;
+    if(!g)s+=`<circle cx="${tx}" cy="${ty}" r="14" fill="var(--c-ink)"/><circle cx="${tx}" cy="${ty}" r="5" fill="var(--c-bg)"/><text x="${tx-22}" y="${ty-14}" text-anchor="end" fill="var(--c-ink)" font-size="20" font-weight="800" font-family="Manrope,sans-serif">220 Market St</text>`;
+    else s+=`<text x="1110" y="625" text-anchor="middle" fill="var(--c-ink)" font-size="20" font-weight="800" font-family="Manrope,sans-serif">Market Square Garage</text>`;
+  }
+  s+=`<g transform="translate(${CAR.x} ${CAR.y})"><circle r="30" fill="var(--c-accent)" opacity=".2"/><circle r="17" fill="var(--c-accent)"/><path d="M-7 7 L0 -10 L7 7 L0 3z" fill="#fff" transform="rotate(90)"/></g>`;
+  return s+'</svg>';
+}
+/* map view: translate + scale, in console units */
+const HOME={k:1,x:860-CAR.x,y:410-CAR.y};
+let V={...HOME}; let CS=1;
+const clampV=()=>{V.k=Math.max(.6,Math.min(2.2,V.k));V.x=Math.min(0,Math.max(1280-MW*V.k,V.x));V.y=Math.min(0,Math.max(720-MH*V.k,V.y));};
+function applyView(ease){const el=$('#mapinner');el.classList.toggle('ease',!!ease);clampV();el.style.transform=`translate(${V.x}px,${V.y}px) scale(${V.k})`;}
+function zoomAt(px,py,f,ease){const nk=Math.max(.6,Math.min(2.2,V.k*f));V.x=px-(px-V.x)*nk/V.k;V.y=py-(py-V.y)*nk/V.k;V.k=nk;applyView(ease);}
+(function mapGestures(){
+  const vp=$('#mapvp'),pts=new Map();let last=null,lastDist=0;
+  const loc=e=>{const r=vp.getBoundingClientRect();return{x:(e.clientX-r.left)/CS,y:(e.clientY-r.top)/CS};};
+  vp.addEventListener('pointerdown',e=>{vp.setPointerCapture(e.pointerId);pts.set(e.pointerId,loc(e));vp.classList.add('dragging');last=loc(e);if(pts.size===2){const [a,b]=[...pts.values()];lastDist=Math.hypot(a.x-b.x,a.y-b.y);}});
+  vp.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;const p=loc(e);pts.set(e.pointerId,p);
+    if(pts.size===1&&last){V.x+=p.x-last.x;V.y+=p.y-last.y;last=p;applyView(false);}
+    else if(pts.size===2){const [a,b]=[...pts.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(lastDist)zoomAt((a.x+b.x)/2,(a.y+b.y)/2,d/lastDist,false);lastDist=d;}});
+  const up=e=>{pts.delete(e.pointerId);if(pts.size===0){vp.classList.remove('dragging');last=null;}else{last=[...pts.values()][0];lastDist=0;}};
+  vp.addEventListener('pointerup',up);vp.addEventListener('pointercancel',up);
+  vp.addEventListener('wheel',e=>{e.preventDefault();const p=loc(e);zoomAt(p.x,p.y,Math.exp(-e.deltaY*0.0015),false);},{passive:false});
+  vp.addEventListener('dblclick',e=>{const p=loc(e);zoomAt(p.x,p.y,1.5,true);});
+})();
+
+/* ---------- console ---------- */
+function statusHTML(){
+  const gearPill=`<div class="gear-pill" aria-label="Gear ${S.gear==='P'?'Park':'Drive'}"><span class="${S.gear==='P'?'on':''}">P</span><span>R</span><span>N</span><span class="${S.gear==='D'?'on':''}">D</span></div>`;
+  return `<div class="gear">${gearPill}<span class="speed">${S.gear==='D'?S.speed+'<small>mph</small>':''}</span></div><span class="clock">${fmt(S.time)}</span><div class="sysicons"><button class="micbtn" data-act="voice" aria-label="Voice. Try “Start parking”">${I.mic}</button><span>68°F</span><span class="${S.online?'':'off'}">${S.online?'LTE':'No signal'}</span></div>`;}
+function dockHTML(){return `<button disabled>${I.nav}Navigation</button><button disabled>${I.media}Media</button><button disabled>${I.call}Phone</button><button class="live" data-act="openApp" aria-label="Parking${S.session?', session running':''}">${I.park}Parking${S.session?'<i class="badge"></i>':''}</button><button disabled>${I.climate}Climate</button>`;}
+const sign=(z,cls='')=>`<div class="sign ${cls}" aria-label="Zone ${z}"><small>ZONE</small><b>${z}</b></div>`;
+const ichip=(icon,t,label)=>`<span class="ichip" aria-label="${label}">${I[icon]}${t}</span>`;
+const fact=(icon,t,cls='')=>`<div class="fact"><span class="ico ${cls}">${I[icon]}</span>${t}</div>`;
+function promptCard(){
+  const atMax=S.dur>=MAX, tot=total(S.dur);
+  return `<div class="card" role="dialog" aria-label="Start parking in zone ${S.zone}">
+   <div class="head">${sign(S.zone)}<div class="headtxt"><b>Market St</b><button class="textbtn" data-act="notThis">Change zone</button></div></div>
+   <div class="ichips">${ichip('rate','2.50/hr','Rate 2 dollars 50 per hour')}${ichip('car',PLATE,'Plate '+PLATE)}${ichip('cardi',CARD,'Pays with '+CARD)}</div>
+   <div class="timebox">
+     <div class="timetop"><div class="stepper"><button data-act="dec" aria-label="Less time" ${S.dur<=STEP?'disabled':''}>${I.minus}</button><output aria-live="polite">${durTxt(S.dur)}</output><button data-act="inc" aria-label="More time" ${atMax?'disabled':''}>${I.plus}</button></div>
+     <div class="ends"><small>Ends</small><b>${fmt(S.time+S.dur)}</b></div></div>
+     <div class="track" aria-hidden="true"><i style="width:${S.dur/MAX*100}%"></i><em></em></div>
+     <div class="tracklbl" aria-hidden="true"><span>Now</span><span class="max">MAX 2 HR</span></div>
+   </div>
+   <div class="actions"><button class="primary" data-act="start"><span>Start parking</span><span class="price"><b>${money(tot)}</b><small>incl. 35¢ fee</small></span></button>
+     <button class="later" data-act="later" aria-expanded="${S.later}">Later<span>···</span></button>
+     ${S.later?`<div class="pop" role="menu"><button role="menuitem" data-act="notNow">${I.clock}Not now</button><button role="menuitem" data-act="dontAsk">${I.hide}Don’t ask here</button></div>`:''}</div></div>`;
+}
+function cardHTML(){
+  const c=S.card;
+  if(!c){ if(S.session&&!S.carOff) return `<div class="chip"><span class="sign xs"><b>${S.session.zone}</b></span>Until ${fmt(S.session.end)}</div>`; return '';}
+  if(c==='prompt')return promptCard();
+  if(c==='approach')return `<div class="card narrow" role="dialog" aria-label="Parking near destination"><div class="eyebrow"><i></i>Parking near 220 Market St</div>
+    <button class="opt" data-act="approachPick" data-arg="street"><span class="pin">1</span><span class="o"><b>Street · Zone 4127</b><span class="meta"><span>${I.rate}2.50/hr</span><span>${I.walk}1 min</span></span></span><span class="chev">${I.chev}</span></button>
+    <button class="opt" data-act="approachPick" data-arg="garage"><span class="pin">2</span><span class="o"><b>Market Square Garage</b><span class="meta"><span>${I.rate}4.00/hr</span><span>${I.walk}3 min</span></span></span><span class="chev">${I.chev}</span></button>
+    <div class="ghostrow"><span class="body" style="font-size:18px;flex:1">You pay once you’re parked</span><button class="ghost" data-act="approachDismiss">Dismiss</button></div></div>`;
+  if(c==='collapsed')return `<div class="chip">${I.pause}Back when you’re in Park</div>`;
+  if(c==='zonePick')return `<div class="card" role="dialog" aria-label="Choose your zone"><p class="title">Which sign do you see?</p>
+    <div class="signs"><button class="signpick" data-act="pickZone" data-arg="4127">${sign('4127')}<span>${I.arrowUp}This side</span></button><button class="signpick" data-act="pickZone" data-arg="4128">${sign('4128')}<span>${I.arrowDown}Across the street</span></button></div>
+    <div class="ghostrow"><button class="ghost grow" data-act="notNow">Not now</button></div></div>`;
+  if(c==='link')return `<div class="card" role="dialog" aria-label="Link ParkMobile"><p class="title">Pay for parking from here</p>
+    <div class="qrrow"><button class="qr" data-act="scan" aria-label="QR code. Tap to simulate a scan">${qr(41)}</button><div class="facts">${fact('phone','Scan with your phone')}${fact('check','Sign in to ParkMobile','ok')}${fact('clock','One time only')}</div></div>
+    <div class="ghostrow"><button class="ghost grow" data-act="payOnPhone">Use my phone</button><button class="ghost grow" data-act="cancelLink">Not now</button></div></div>`;
+  if(c==='declined')return `<div class="card" role="alertdialog" aria-label="Card declined"><div class="eyebrow warn"><i></i>No session started</div><p class="title">Card declined</p>
+    <div class="facts">${fact('cardi',CARD+' didn’t go through','warn')}${fact('check','You weren’t charged','ok')}${fact('phone','Update it on your phone')}</div>
+    <div class="actions"><button class="primary solo" data-act="retry">Try again</button><button class="later" data-act="notNow">Not now</button></div></div>`;
+  if(c==='offline')return `<div class="card" role="alertdialog" aria-label="No connection"><div class="eyebrow warn"><i></i>No session started</div><p class="title">No connection</p>
+    <div class="qrrow"><button class="qr" data-act="scan" aria-label="QR code. Tap to simulate a scan">${qr(77)}</button><div class="facts">${fact('phone','Scan to start on your phone')}${fact('check','Zone '+S.zone+' filled in','ok')}</div></div>
+    <div class="ghostrow"><button class="ghost grow" data-act="retry">Try again</button><button class="ghost grow" data-act="notNow">Not now</button></div></div>`;
+  if(c==='started'||c==='sessionView'){const s=S.session;return `<div class="card" role="dialog" aria-label="Parking session"><div class="head">${sign(s.zone,'sm')}<div class="headtxt"><span class="eyebrow ok"><i></i>Parked</span><b style="font-size:40px">Until ${fmt(s.end)}</b></div></div>
+    <div class="facts">${fact('cardi','Up to '+money(total(s.end-s.start))+' · '+CARD)}${S.autoEnd?fact('driveaway','Ends when you drive away','ok'):fact('bell','We’ll ask as you pull away','warn')}${fact('phone','Timer and extend on your phone')}</div>
+    ${c==='sessionView'?'<div class="actions"><button class="primary solo" data-act="endNow">End parking</button><button class="later" data-act="done">Close</button></div>':'<button class="primary solo" data-act="done">Done</button>'}</div>`;}
+  if(c==='endAsk')return `<div class="card narrow" role="alertdialog" aria-label="End parking"><div class="head">${sign(S.session.zone,'sm')}<p class="title">End parking?</p></div>
+    <button class="primary solo" data-act="endNow">End parking</button><span class="body" style="display:flex;gap:8px;align-items:center;font-size:18px"><span style="width:22px;display:inline-grid">${I.mic}</span>Or say “End parking”</span></div>`;
+  if(c==='receipt'){const r=S.receipt;return `<div class="card narrow" role="status" aria-label="Parking ended"><div class="head">${sign(r.zone,'sm')}<div class="headtxt"><span class="eyebrow ok"><i></i>Parking ended</span><div class="bigline"><b>${money(r.cost)}</b><span>${r.used} min</span></div></div></div>
+    <div class="facts">${fact(r.auto?'driveaway':'check',r.auto?'Ended as you drove away':'Ended by you','ok')}${fact('phone','Receipt on your phone')}</div></div>`;}
+  if(c==='free')return `<div class="card narrow" role="dialog" aria-label="Parking free"><div class="eyebrow ok"><i></i>No payment needed</div><p class="title">Free until 9:00 AM</p><div class="facts">${fact('clock','Meters in Zone 4127 are off')}</div><button class="primary solo" data-act="closeCard">OK</button></div>`;
+  if(c==='none')return `<div class="card narrow" role="dialog" aria-label="Not covered"><div class="eyebrow warn"><i></i>Not covered</div><p class="title">No ParkMobile here</p><div class="facts">${fact('park','Pay at the meter or kiosk')}</div><button class="primary solo" data-act="closeCard">OK</button></div>`;
+  if(c==='appMoving')return `<div class="card narrow" role="dialog" aria-label="Parking"><p class="title">Opens in Park</p><div class="facts">${fact('mic','Say “Find parking”')}</div><div class="ghostrow"><button class="ghost grow" data-act="closeCard">Close</button></div></div>`;
+  return '';
+}
+function layerHTML(){let h=cardHTML();
+  if(S.toast)h+=`<div class="toast" role="status">${S.toast.icon?I[S.toast.icon]:''}${S.toast.t}</div>`;
+  if(S.carOff)h+=`<div class="off-overlay"><div><b>Car is off</b><span>The driver has walked away. The phone has the session.</span></div></div>`;
+  return h;}
+
+/* ---------- phone ---------- */
+function phoneHTML(){
+  const p=S.phone, s=S.session;
+  const lock=(n)=>`<div class="island"></div><div class="lock"><div class="t">${fmt(S.time).replace(/ (AM|PM)/,'')}</div><div class="d">Tuesday, October 27</div>${n||''}</div>`;
+  const app=(inner)=>`<div class="island"></div><div class="app"><div class="appbar">ParkMobile<span>${fmt(S.time)}</span></div>${inner}</div>`;
+  if(p==='lock')return lock();
+  if(p==='started')return lock(`<div class="notif"><div class="nhead"><span>ParkMobile</span><span>now</span></div><b>Parking started · Zone ${s?s.zone:S.zone}</b><p>Until ${s?fmt(s.end):''}, started from your car. Up to ${s?money(total(s.end-s.start)):''}.</p><button class="act" data-act="openTimer">Open timer</button></div>`);
+  if(p==='alert10')return lock(`<div class="notif"><div class="nhead"><span>ParkMobile</span><span>now</span></div><b>10 minutes left · Zone ${s.zone}</b><p>Ends ${fmt(s.end)}. You can extend up to 2 hr in total.</p><button class="act" data-act="extend">Extend 30 min · ${money(RATE/2)}</button></div>`);
+  if(p==='timer'){const left=s.end-S.time, pct=Math.max(0,Math.min(1,left/(s.end-s.start)));const C=2*Math.PI*86;
+    return app(`<h4>Zone ${s.zone}</h4><p>Market St · ${PLATE}</p>
+    <div style="display:grid;place-items:center;margin:6px 0"><svg width="200" height="200" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="86" fill="none" stroke="#E2E6EA" stroke-width="12"/><circle cx="100" cy="100" r="86" fill="none" stroke="#18794E" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-pct)}" transform="rotate(-90 100 100)"/><text x="100" y="98" text-anchor="middle" font-size="40" font-weight="800" font-family="Manrope,sans-serif" fill="#11161C">${durTxt(left)}</text><text x="100" y="128" text-anchor="middle" font-size="16" font-weight="600" font-family="Manrope,sans-serif" fill="#5A6470">left · ends ${fmt(s.end)}</text></svg></div>
+    <div class="bottom"><button class="pbtn" data-act="extend">Extend 30 min · ${money(RATE/2)}</button><button class="pbtn alt" data-act="phoneEnd">End parking</button></div>`);}
+  if(p==='maxReached')return app(`<h4>Zone maximum reached</h4><div class="pwarn">Zone ${s.zone} allows 2 hr in total. Move your car by ${fmt(s.end)} to avoid a ticket.</div>
+    <div class="pcard"><span class="k">Session</span><span class="v">Ends ${fmt(s.end)}</span></div><div class="bottom"><button class="pbtn" disabled>Extend not available</button><button class="pbtn alt" data-act="phoneEnd">End parking</button></div>`);
+  if(p==='receipt'){const r=S.receipt;return app(`<h4>Parking ended</h4><p>Zone ${r.zone} · ${r.auto?'ended when your car drove away':'ended by you'}</p>
+    <div class="pcard"><span class="k">Time used</span><span class="v">${r.used} min</span></div>
+    <div class="pcard"><span class="k">Charged to ${CARD}</span><span class="v">${money(r.cost)}</span><p style="font-size:15px">${money(r.cost-FEE)} parking + ${money(FEE)} fee</p></div>
+    <div class="bottom"><button class="pbtn alt" data-act="dispute">Something wrong? Dispute</button></div>`);}
+  if(p==='declined')return app(`<h4>Payment declined</h4><div class="pwarn">${CARD} was declined. No parking session started, and you weren’t charged.</div><p>Update your card, then tap Try again in the car.</p><div class="bottom"><button class="pbtn" data-act="updateCard">Update card</button></div>`);
+  if(p==='approve')return app(`<h4>Link your car?</h4><p>Acme car with plate ${PLATE} wants to start and end parking with your account.</p>
+    <div class="pcard"><span class="k">Pays with</span><span class="v">${CARD}</span></div><div class="pcard"><span class="k">The car can</span><span class="v" style="font-size:16px">Start, extend and end sessions. It never sees your card number or password.</span></div>
+    <div class="bottom"><button class="pbtn" data-act="approve">Approve</button><button class="pbtn alt" data-act="cancelLink">Cancel</button></div>`);
+  if(p==='signinFail')return app(`<h4>Couldn’t sign in</h4><div class="pwarn">That password didn’t match. Nothing was linked. The code on your car screen still works.</div><div class="bottom"><button class="pbtn" data-act="retrySignin">Try again</button><button class="pbtn alt" data-act="cancelLink">Cancel</button></div>`);
+  if(p==='linked')return app(`<h4>Car linked</h4><p>Your car can now start parking for you. Unlink anytime in Settings.</p><div class="pcard"><span class="k">Linked car</span><span class="v">Acme · ${PLATE}</span></div>`);
+  if(p==='startOnPhone')return app(`<h4>Start parking</h4><p>Opened from your car. Details are filled in.</p><div class="pcard"><span class="k">Zone</span><span class="v">${S.zone} · Market St</span></div><div class="pcard"><span class="k">Time</span><span class="v">${durTxt(S.dur)} · until ${fmt(S.time+S.dur)}</span></div><div class="bottom"><button class="pbtn" data-act="phoneStart">Start parking · ${money(total(S.dur))}</button></div>`);
+  return lock();
+}
+
+/* ---------- panel ---------- */
+const TOUR=[
+ {label:'Link account, once',set(){S.linked=false;A.park();}},
+ {label:'Approach',set(){S.gear='D';S.speed=22;S.card='approach';note('approach');}},
+ {label:'Park in a paid zone',set(){A.park();}},
+ {label:'Start: the hero moment',set(){A.park();A.start();}},
+ {label:'Away from the car',set(){A.park();A.start();A.walk();}},
+ {label:'Settle',set(){A.park();A.start();A.walk();A.returnDrive();}}];
+const EDGES=[
+ {label:'Sign-in fails on the phone',err:1,set(){S.linked=false;S.signinFails=true;A.park();A.scan();A.approve();}},
+ {label:'No nav destination',set(){S.nav=false;note('noDest');}},
+ {label:'Two zones within GPS error',set(){S.loc='two';A.park();}},
+ {label:'Free hours',set(){S.loc='free';S.time=18*60+40;A.park();A.openApp();}},
+ {label:'Not a partner zone',set(){S.loc='none';A.park();A.openApp();}},
+ {label:'Car leaves Park before the tap',set(){A.park();A.drive();}},
+ {label:'Card declined',err:1,set(){S.declines=true;A.park();A.start();}},
+ {label:'No connection',err:1,set(){S.online=false;A.park();A.start();}},
+ {label:'Not now or Don’t ask here',set(){A.park();S.later=true;note('later');}},
+ {label:'Duration at the zone maximum',set(){S.dur=MAX;A.park();}},
+ {label:'Zone maximum reached',set(){S.dur=MAX;A.park();A.start();A.walk();A.extend();}},
+ {label:'City doesn’t allow auto-end',set(){S.autoEnd=false;A.park();A.start();A.walk();A.returnDrive();}},
+ {label:'Charge looks wrong',set(){A.park();A.start();A.walk();A.returnDrive();note('dispute');}}];
+
+function go(kind,i){S=base();clearTimeout(toastTimer);if(kind==='t'){S.tour=i;TOUR[i].set();}else if(kind==='e'){S.edge=i;EDGES[i].set();}syncControls();V={...HOME};applyView(true);render();}
+function syncControls(){$('#loc').value=S.loc;$('#tLinked').checked=S.linked;$('#tOnline').checked=S.online;$('#tDecline').checked=S.declines;$('#tAuto').checked=S.autoEnd;}
+
+function narrHTML(){const n=NOTES[S.note]||NOTES.driving;
+  const tag=S.tour!=null?`<span class="tag">Step ${S.tour+1} of 6</span>`:(S.edge!=null?`<span class="tag ${EDGES[S.edge].err?'err':''}">${EDGES[S.edge].err?'Error path':'Edge path'}</span>`:'<span class="tag">Free play</span>');
+  const nav=S.tour!=null?`<div class="narr-nav"><button class="btn" data-go="prev" ${S.tour===0?'disabled':''}>Previous</button><button class="btn cta" data-go="next" ${S.tour===5?'disabled':''}>Next step</button></div>`:(S.edge==null&&S.tour==null&&S.note==='driving'?`<div class="narr-nav"><button class="btn cta" data-go="start">Start the tour</button></div>`:'');
+  return `<div class="narr-head">${tag}<h2>${n.t}</h2></div><div class="narr-grid"><div><span class="lbl">What happens</span><p>${n.w}</p></div><div><span class="lbl">Why</span><p>${n.y}</p></div>${n.try?`<div><span class="lbl">Try</span><p>${n.try}</p></div>`:''}${n.a?`<div><span class="lbl">Assumption</span><p>${n.a}</p></div>`:''}</div>${nav}`;}
+
+function renderLayer(){$('#clayer').innerHTML=layerHTML();}
+function render(){
+  $('#cstatus').innerHTML=statusHTML();
+  $('#mapinner').innerHTML=mapSVG();
+  renderLayer();
+  $('#cdock').innerHTML=dockHTML();
+  $('#phone').innerHTML=phoneHTML();
+  $('#narr').innerHTML=narrHTML();
+  $('#gP').setAttribute('aria-pressed',S.gear==='P');$('#gD').setAttribute('aria-pressed',S.gear==='D');
+  document.querySelectorAll('#steps button').forEach((b,i)=>b.setAttribute('aria-current',S.tour===i));
+  document.querySelectorAll('#edges button').forEach((b,i)=>b.setAttribute('aria-current',S.edge===i));
+}
+
+$('#steps').innerHTML=TOUR.map((t,i)=>`<li><button data-tour="${i}"><span class="num">${i+1}</span>${t.label}</button></li>`).join('');
+$('#edges').innerHTML=EDGES.map((t,i)=>`<li><button data-edge="${i}"><span class="dot ${t.err?'err':''}"></span>${t.label}</button></li>`).join('');
+
+document.addEventListener('click',e=>{
+  const m=e.target.closest('[data-map]');if(m){const k=m.dataset.map;if(k==='center'){V={...HOME};applyView(true);}else zoomAt(640,360,k==='in'?1.35:1/1.35,true);return;}
+  const t=e.target.closest('[data-tour]');if(t)return go('t',+t.dataset.tour);
+  const ed=e.target.closest('[data-edge]');if(ed)return go('e',+ed.dataset.edge);
+  const g=e.target.closest('[data-go]');if(g){const k=g.dataset.go;if(k==='start')return go('t',0);return go('t',S.tour+(k==='next'?1:-1));}
+  const a=e.target.closest('[data-act]');if(a&&A[a.dataset.act]&&!a.disabled){if(a.dataset.act!=='resetAll'){S.tour=null;S.edge=null;}A[a.dataset.act](a.dataset.arg);syncControls();render();return;}
+  if(S.later&&!e.target.closest('.pop')){S.later=false;render();}
+});
+$('#loc').addEventListener('change',e=>{S.loc=e.target.value;S.tour=null;S.edge=null;S.time=S.loc==='free'?18*60+40:15*60+2;if(S.gear==='P'&&!S.session)A.park();render();});
+$('#tLinked').addEventListener('change',e=>{S.linked=e.target.checked;S.tour=null;S.edge=null;if(S.gear==='P'&&!S.session)A.park();render();});
+$('#tOnline').addEventListener('change',e=>{S.online=e.target.checked;render();});
+$('#tDecline').addEventListener('change',e=>{S.declines=e.target.checked;});
+$('#tAuto').addEventListener('change',e=>{S.autoEnd=e.target.checked;});
+
+/* ---------- scaling ---------- */
+const cw=$('#consoleWrap'), pw=$('#phoneWrap');
+function fit(){
+  const stacked=window.matchMedia('(max-width:760px)').matches;
+  const stage=cw.parentElement.clientWidth;
+  let ph;
+  if(stacked){cw.style.width='100%';CS=cw.clientWidth/1280;ph=Math.min(560,window.innerHeight*0.8);}
+  else{const cWidth=(stage-16)/(1+(9/16)*(390/800));cw.style.width=cWidth+'px';CS=cWidth/1280;ph=cWidth*9/16;}
+  $('#consoleScaler').style.transform=`scale(${CS})`;
+  const pwid=ph*390/800;pw.style.width=pwid+'px';pw.style.height=ph+'px';$('#phoneScaler').style.transform=`scale(${ph/800})`;
+  const tag=$('#phoneTag');if(tag)tag.style.width=pwid+'px';
+}
+new ResizeObserver(fit).observe(document.querySelector('.left'));
+window.addEventListener('resize',fit);
+render();applyView(false);fit();
+})();
+</script>
